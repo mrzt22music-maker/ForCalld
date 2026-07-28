@@ -127,7 +127,11 @@ async function buildPeerConnection() {
     if (['disconnected', 'failed', 'closed'].includes(pc.connectionState)) endCall(false);
   };
 
-  localStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+  try {
+    localStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+  } catch (err) {
+    throw new Error('Нет доступа к микрофону — разреши доступ в браузере (' + err.message + ')');
+  }
   localStream.getTracks().forEach(track => pc.addTrack(track, localStream));
 }
 
@@ -216,29 +220,36 @@ async function translateText(text, from, to) {
 // --- Outgoing call ---
 callBtn.addEventListener('click', async () => {
   const target = targetIdInput.value.trim().toLowerCase();
-  if (!target) return;
+  if (!target) { alert('Введи ID собеседника'); return; }
 
-  const { data: targetUser, error } = await supabase.from('users').select('*').eq('username', target).maybeSingle();
-  if (error || !targetUser) { alert('Пользователь не найден'); return; }
+  try {
+    const { data: targetUser, error } = await supabase.from('users').select('*').eq('username', target).maybeSingle();
+    if (error) throw new Error('Supabase: ' + error.message);
+    if (!targetUser) { alert('Пользователь @' + target + ' не найден'); return; }
 
-  peerUsername = target;
-  peerName.textContent = targetUser.nickname;
-  peerAvatar.innerHTML = targetUser.avatar_url ? `<img src="${targetUser.avatar_url}">` : targetUser.nickname[0].toUpperCase();
-  callStatus.textContent = 'Звоним...';
-  showCall();
+    peerUsername = target;
+    peerName.textContent = targetUser.nickname;
+    peerAvatar.innerHTML = targetUser.avatar_url ? `<img src="${targetUser.avatar_url}">` : targetUser.nickname[0].toUpperCase();
+    callStatus.textContent = 'Звоним...';
+    showCall();
 
-  await buildPeerConnection();
-  const channel = pc.createDataChannel('captions');
-  setupDataChannel(channel);
+    await buildPeerConnection();
+    const channel = pc.createDataChannel('captions');
+    setupDataChannel(channel);
 
-  const offer = await pc.createOffer();
-  await pc.setLocalDescription(offer);
+    const offer = await pc.createOffer();
+    await pc.setLocalDescription(offer);
 
-  sendSignal(target, 'offer', {
-    from: me.username, fromNick: me.nickname, fromAvatar: me.avatarUrl, sdp: offer,
-  });
+    sendSignal(target, 'offer', {
+      from: me.username, fromNick: me.nickname, fromAvatar: me.avatarUrl, sdp: offer,
+    });
 
-  startRecognition();
+    startRecognition();
+  } catch (err) {
+    console.error(err);
+    alert('Не удалось позвонить: ' + err.message);
+    endCall();
+  }
 });
 
 // --- Incoming call ---
@@ -258,15 +269,21 @@ acceptBtn.addEventListener('click', async () => {
   callStatus.textContent = 'Соединяемся...';
   showCall();
 
-  await buildPeerConnection();
-  pc.ondatachannel = (e) => setupDataChannel(e.channel);
+  try {
+    await buildPeerConnection();
+    pc.ondatachannel = (e) => setupDataChannel(e.channel);
 
-  await pc.setRemoteDescription(new RTCSessionDescription(offerPayload.sdp));
-  const answer = await pc.createAnswer();
-  await pc.setLocalDescription(answer);
+    await pc.setRemoteDescription(new RTCSessionDescription(offerPayload.sdp));
+    const answer = await pc.createAnswer();
+    await pc.setLocalDescription(answer);
 
-  sendSignal(peerUsername, 'answer', { from: me.username, sdp: answer });
-  startRecognition();
+    sendSignal(peerUsername, 'answer', { from: me.username, sdp: answer });
+    startRecognition();
+  } catch (err) {
+    console.error(err);
+    alert('Не удалось принять звонок: ' + err.message);
+    endCall();
+  }
 });
 
 declineBtn.addEventListener('click', () => {

@@ -34,6 +34,13 @@ document.getElementById('goCallBtn').addEventListener('click', () => {
 document.getElementById('registerForm').addEventListener('submit', async (e) => {
   e.preventDefault();
 
+  const form = e.target;
+  if (!form.checkValidity()) {
+    const invalid = form.querySelector(':invalid');
+    alert('Проверь поле "' + (invalid?.previousElementSibling?.textContent || invalid?.id) + '" — оно заполнено неверно (' + (invalid?.validationMessage || '') + ')');
+    return;
+  }
+
   if (cfg.SUPABASE_URL.includes('ВАШ-ПРОЕКТ')) {
     alert('Сначала впиши свои ключи Supabase в config.js — инструкция в README.md');
     return;

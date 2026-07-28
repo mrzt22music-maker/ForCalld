@@ -9,6 +9,6 @@ window.FORCALL_CONFIG = {
 
   // Metered.ca: dashboard.metered.ca → Application → TURN credentials
   // (используется в call.html для WebRTC)
-  METERED_DOMAIN: "ВАШ-ПРОЕКТ.metered.live",
-  METERED_API_KEY: "ВАШ-METERED-API-KEY",
+  METERED_DOMAIN: "forcalls.metered.live",
+  METERED_API_KEY: "bMDB3bB_GMXfPRGu77PLnxvb50765ZS46l5qV3NYbQoI8rYj",
 };

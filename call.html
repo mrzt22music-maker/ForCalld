@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ForCall — звонок</title>
+<link rel="stylesheet" href="style.css">
+<style>
+  .call-avatar {
+    width: 96px; height: 96px; border-radius: 32px;
+    background: var(--md-primary-container);
+    color: var(--md-on-primary-container);
+    display: flex; align-items: center; justify-content: center;
+    font-family: var(--font-display); font-weight: 700; font-size: 36px;
+    margin: 0 auto 16px; overflow: hidden;
+  }
+  .call-avatar img { width: 100%; height: 100%; object-fit: cover; }
+  .call-center { text-align: center; margin: 24px 0 8px; }
+  .call-controls { display: flex; gap: 12px; justify-content: center; margin-top: 28px; }
+  .lang-bar { margin-top: 24px; }
+  .lang-bar-label { font-size: 12px; color: var(--md-on-surface-variant); margin-bottom: 10px; text-align: center; }
+  .chip-row { display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; }
+  .caption-box {
+    margin-top: 20px; min-height: 48px;
+    background: var(--md-surface-container);
+    border-radius: 16px; padding: 12px 16px;
+    font-size: 14px; color: var(--md-on-surface-variant);
+  }
+  .caption-box b { color: var(--md-on-surface); }
+  #incomingModal {
+    position: fixed; inset: 0; background: rgba(28,27,31,0.5);
+    display: none; align-items: center; justify-content: center; z-index: 50;
+  }
+  #incomingModal.show { display: flex; }
+  .modal-card {
+    background: var(--md-surface); border-radius: 28px; padding: 28px 24px;
+    width: 90%; max-width: 340px; text-align: center;
+  }
+  .modal-actions { display: flex; gap: 12px; margin-top: 20px; }
+  #screenIdle, #screenCall { display: none; }
+  #screenIdle.show, #screenCall.show { display: block; }
+</style>
+</head>
+<body>
+
+<div class="shell">
+
+  <div class="brand">
+    <svg class="brand-mark" viewBox="0 0 34 34" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <rect width="34" height="34" rx="12" fill="#6750A4"/>
+      <path d="M10 13.5c0-1.9 1.6-3.5 3.5-3.5h1c.5 0 1 .3 1.2.8l1 2.3c.2.5.1 1-.3 1.4l-1 1c-.2.2-.2.5-.1.7.8 1.6 2.1 2.9 3.7 3.7.2.1.5.1.7-.1l1-1c.4-.4.9-.5 1.4-.3l2.3 1c.5.2.8.7.8 1.2v1c0 1.9-1.6 3.5-3.5 3.5-6.6 0-12-5.4-12-12z" fill="#FFFBFE"/>
+    </svg>
+    <div class="brand-name">For<b>Call</b></div>
+  </div>
+
+  <!-- ===================== IDLE SCREEN: dial someone ===================== -->
+  <div id="screenIdle" class="card">
+    <div class="pill online" id="mePill">—</div>
+    <div class="field" style="margin-top:18px;">
+      <label for="targetId">ID собеседника</label>
+      <input type="text" id="targetId" class="mono" placeholder="napr. john_ph">
+    </div>
+    <button class="btn btn-filled" id="callBtn">
+      <span class="material-symbols-outlined">call</span>
+      Позвонить
+    </button>
+  </div>
+
+  <!-- ===================== ACTIVE CALL SCREEN ===================== -->
+  <div id="screenCall" class="card">
+    <div class="call-center">
+      <div class="call-avatar" id="peerAvatar">?</div>
+      <h2 id="peerName" style="font-size:20px;">—</h2>
+      <p id="callStatus">Соединение...</p>
+    </div>
+
+    <div class="caption-box" id="captionBox">Перевод появится здесь во время разговора.</div>
+
+    <div class="lang-bar">
+      <div class="lang-bar-label">Слышать перевод собеседника на:</div>
+      <div class="chip-row" id="langChips">
+        <div class="chip" data-lang="kk">Қазақша</div>
+        <div class="chip" data-lang="ru">Русский</div>
+        <div class="chip" data-lang="en">English</div>
+        <div class="chip" data-lang="tl">Tagalog</div>
+      </div>
+    </div>
+
+    <div class="call-controls">
+      <button class="btn btn-tonal btn-icon" id="muteBtn" title="Микрофон">
+        <span class="material-symbols-outlined">mic</span>
+      </button>
+      <button class="btn btn-danger btn-icon" id="hangupBtn" title="Завершить">
+        <span class="material-symbols-outlined">call_end</span>
+      </button>
+    </div>
+  </div>
+
+  <p class="footer-note">Голос идёт напрямую (WebRTC). Перевод — текстом через локальный синтез речи браузера.</p>
+</div>
+
+<!-- ===================== INCOMING CALL MODAL ===================== -->
+<div id="incomingModal">
+  <div class="modal-card">
+    <div class="call-avatar" id="incomingAvatar">?</div>
+    <h3 id="incomingName">—</h3>
+    <p>вам звонит</p>
+    <div class="modal-actions">
+      <button class="btn btn-danger" id="declineBtn">
+        <span class="material-symbols-outlined">call_end</span>
+      </button>
+      <button class="btn btn-filled" id="acceptBtn">
+        <span class="material-symbols-outlined">call</span>
+      </button>
+    </div>
+  </div>
+</div>
+
+<audio id="remoteAudio" autoplay></audio>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="config.js"></script>
+<script src="ripple.js"></script>
+<script src="call.js"></script>
+</body>
+</html>

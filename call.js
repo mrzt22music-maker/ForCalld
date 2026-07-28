@@ -7,7 +7,7 @@
 // ==========================================================
 
 const cfg = window.FORCALL_CONFIG;
-const supabase = window.supabase.createClient(cfg.SUPABASE_URL, cfg.SUPABASE_ANON_KEY);
+const sb = window.supabase.createClient(cfg.SUPABASE_URL, cfg.SUPABASE_ANON_KEY);
 
 const LANG_NAME_TO_CODE = { 'Қазақша': 'kk', 'Русский': 'ru', 'English': 'en', 'Tagalog': 'tl', 'Filipino': 'tl' };
 const RECOGNITION_LOCALE = { kk: 'kk-KZ', ru: 'ru-RU', en: 'en-US', tl: 'fil-PH' };
@@ -84,7 +84,7 @@ async function getIceServers() {
 
 // --- Supabase signaling helpers ---
 function channelFor(username) {
-  return supabase.channel(`signal:${username}`, { config: { broadcast: { self: false } } });
+  return sb.channel(`signal:${username}`, { config: { broadcast: { self: false } } });
 }
 
 function sendSignal(toUsername, event, payload) {
@@ -92,7 +92,7 @@ function sendSignal(toUsername, event, payload) {
   ch.subscribe((status) => {
     if (status === 'SUBSCRIBED') {
       ch.send({ type: 'broadcast', event, payload });
-      setTimeout(() => supabase.removeChannel(ch), 1500);
+      setTimeout(() => sb.removeChannel(ch), 1500);
     }
   });
 }
@@ -223,7 +223,7 @@ callBtn.addEventListener('click', async () => {
   if (!target) { alert('Введи ID собеседника'); return; }
 
   try {
-    const { data: targetUser, error } = await supabase.from('users').select('*').eq('username', target).maybeSingle();
+    const { data: targetUser, error } = await sb.from('users').select('*').eq('username', target).maybeSingle();
     if (error) throw new Error('Supabase: ' + error.message);
     if (!targetUser) { alert('Пользователь @' + target + ' не найден'); return; }
 
